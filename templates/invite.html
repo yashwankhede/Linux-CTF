@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>GCL Invite</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="terminal">
+        <h1>Welcome to GCL Labs</h1>
+        <p>Enter your invite code to begin your journey.</p>
+        <form method="POST" action="/verify-invite">
+            <label for="invite">Invite Code:</label><br>
+            <input type="text" id="invite" name="invite" required placeholder="GCL{...}">
+            <button type="submit">Submit</button>
+        </form>
+        {% if error %}
+            <p class="error">{{ error }}</p>
+        {% endif %}
+    </div>
+</body>
+</html>
