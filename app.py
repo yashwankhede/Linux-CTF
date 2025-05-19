@@ -2,6 +2,7 @@ import firebase_admin
 from firebase_admin import credentials, auth, firestore
 from flask import Flask, render_template, request, redirect, session, send_from_directory, flash
 import json
+import os
 
 firebase_json = os.getenv("FIREBASE_KEY")
 firebase_dict = json.loads(firebase_json)
