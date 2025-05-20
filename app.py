@@ -36,15 +36,21 @@ def register():
         email = request.form['email']
         password = request.form['password']
 
-        # Password strength validation
         if len(password) < 8 or password.isalpha() or password.isdigit():
             return render_template('register.html', error="Password must be strong (letters + numbers + 8+ chars)")
 
         try:
-            # Create Firebase Auth user
+            # Check if email already exists
+            try:
+                auth.get_user_by_email(email)
+                return render_template('register.html', error="Email already exists.")
+            except firebase_admin.auth.UserNotFoundError:
+                pass  # Good to proceed
+
+            # Create user
             user = auth.create_user(email=email, password=password, display_name=username)
 
-            # Create Firestore user document
+            # Add to Firestore
             db.collection('users').document(user.uid).set({
                 'uid': user.uid,
                 'email': email,
@@ -54,7 +60,20 @@ def register():
                 'created_at': firestore.SERVER_TIMESTAMP
             })
 
-            return f"<h3>Account for {username} registered successfully ✅</h3>"
+            # Trigger email verification using Firebase Identity Toolkit API
+            import requests
+            api_key = os.getenv("FIREBASE_API_KEY")
+            verify_url = f"https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key={api_key}"
+            payload = {
+                "requestType": "VERIFY_EMAIL",
+                "idToken": requests.post(
+                    f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={api_key}",
+                    json={"email": email, "password": password, "returnSecureToken": True}
+                ).json()["idToken"]
+            }
+            requests.post(verify_url, json=payload)
+
+            return render_template('verify.html', email=email)
 
         except Exception as e:
             return render_template('register.html', error=str(e))
@@ -71,3 +90,33 @@ def hidden_file(filename):
 
 if __name__ == '__main__':
     app.run(debug=True)
+    
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+
+        try:
+            # Simulate Firebase login by using a custom endpoint
+            # Firebase Admin SDK doesn't support password verification
+            import requests
+            firebase_api_key = os.getenv("FIREBASE_API_KEY")  # Add this env var to Render
+            login_url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={firebase_api_key}"
+            payload = {
+                "email": email,
+                "password": password,
+                "returnSecureToken": True
+            }
+            resp = requests.post(login_url, json=payload)
+            if resp.status_code == 200:
+                user_data = resp.json()
+                session['uid'] = user_data['localId']
+                return f"<h3>Login successful! Welcome UID: {user_data['localId']}</h3>"
+            else:
+                return render_template('login.html', error="Invalid email or password.")
+
+        except Exception as e:
+            return render_template('login.html', error=str(e))
+
+    return render_template('login.html')
