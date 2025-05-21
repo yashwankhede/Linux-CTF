@@ -3,7 +3,8 @@ from firebase_admin import credentials, auth, firestore
 from flask import Flask, render_template, request, redirect, session, send_from_directory, flash, jsonify
 import json
 import os
-
+from dotenv import load_dotenv
+load_dotenv()
 # Firebase Admin Initialization
 cred = credentials.Certificate("/etc/secrets/firebase_key.json")
 firebase_admin.initialize_app(cred)
@@ -94,29 +95,41 @@ if __name__ == '__main__':
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        email = request.form['email']
+        identifier = request.form['email']  # could be username or email
         password = request.form['password']
 
+        # Convert username to email if needed
         try:
-            # Simulate Firebase login by using a custom endpoint
-            # Firebase Admin SDK doesn't support password verification
+            if '@' not in identifier:
+                users = db.collection('users').where('username', '==', identifier).stream()
+                user_doc = next(users, None)
+                if not user_doc:
+                    return render_template('login.html', error="Username not found.")
+                identifier = user_doc.to_dict()['email']
+        except Exception as e:
+            return render_template('login.html', error=str(e))
+
+        try:
             import requests
-            firebase_api_key = os.getenv("FIREBASE_API_KEY")  # Add this env var to Render
+            firebase_api_key = os.getenv("FIREBASE_API_KEY")
             login_url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={firebase_api_key}"
-            payload = {
-                "email": email,
-                "password": password,
-                "returnSecureToken": True
-            }
-            resp = requests.post(login_url, json=payload)
+            resp = requests.post(login_url, json={"email": identifier, "password": password, "returnSecureToken": True})
             if resp.status_code == 200:
-                user_data = resp.json()
-                session['uid'] = user_data['localId']
-                return f"<h3>Login successful! Welcome UID: {user_data['localId']}</h3>"
-            else:
-                return render_template('login.html', error="Invalid email or password.")
+                data = resp.json()
+                session['uid'] = data['localId']
+                return f"<h3>Login success! Welcome, {identifier}</h3>"
+            return render_template('login.html', error="Invalid credentials.")
 
         except Exception as e:
             return render_template('login.html', error=str(e))
 
     return render_template('login.html')
+
+@app.route('/check-username')
+def check_username():
+    username = request.args.get('username', '').strip()
+    if not username:
+        return jsonify({"available": False})
+    users = db.collection('users').where('username', '==', username).stream()
+    taken = any(users)
+    return jsonify({"available": not taken})
