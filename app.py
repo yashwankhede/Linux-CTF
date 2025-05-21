@@ -92,6 +92,8 @@ def hidden_file(filename):
 if __name__ == '__main__':
     app.run(debug=True)
     
+# ✅ Modified /login route with email verification check
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -114,10 +116,17 @@ def login():
             firebase_api_key = os.getenv("FIREBASE_API_KEY")
             login_url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={firebase_api_key}"
             resp = requests.post(login_url, json={"email": identifier, "password": password, "returnSecureToken": True})
+
             if resp.status_code == 200:
                 data = resp.json()
+
+                # Verify if the user has confirmed their email
+                if not data.get("emailVerified", False):
+                    return render_template('login.html', error="Please verify your email before logging in.")
+
                 session['uid'] = data['localId']
                 return f"<h3>Login success! Welcome, {identifier}</h3>"
+
             return render_template('login.html', error="Invalid credentials.")
 
         except Exception as e:
