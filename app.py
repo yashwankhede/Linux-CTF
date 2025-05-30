@@ -50,6 +50,7 @@ def register():
 
             # Create user
             user = auth.create_user(email=email, password=password, display_name=username)
+            data = resp.json()
 
             # Add to Firestore
             db.collection('users').document(user.uid).set({
