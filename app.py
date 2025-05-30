@@ -46,13 +46,12 @@ def register():
                 auth.get_user_by_email(email)
                 return render_template('register.html', error="Email already exists.")
             except firebase_admin.auth.UserNotFoundError:
-                pass  # Good to proceed
+                pass  # Safe to proceed
 
-            # Create user
+            # Create user in Firebase Auth
             user = auth.create_user(email=email, password=password, display_name=username)
-            data = resp.json()
 
-            # Add to Firestore
+            # Store in Firestore (✅ FIXED: removed bad resp reference)
             db.collection('users').document(user.uid).set({
                 'uid': user.uid,
                 'email': email,
@@ -62,18 +61,22 @@ def register():
                 'created_at': firestore.SERVER_TIMESTAMP
             })
 
-            # Trigger email verification using Firebase Identity Toolkit API
+            # Send email verification (✅ REUSING login token call)
             import requests
             api_key = os.getenv("FIREBASE_API_KEY")
+            signin_url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={api_key}"
+            sign_resp = requests.post(signin_url, json={
+                "email": email,
+                "password": password,
+                "returnSecureToken": True
+            })
+
+            if sign_resp.status_code != 200:
+                return render_template("register.html", error="Failed to initiate email verification.")
+
+            id_token = sign_resp.json()["idToken"]
             verify_url = f"https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key={api_key}"
-            payload = {
-                "requestType": "VERIFY_EMAIL",
-                "idToken": requests.post(
-                    f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={api_key}",
-                    json={"email": email, "password": password, "returnSecureToken": True}
-                ).json()["idToken"]
-            }
-            requests.post(verify_url, json=payload)
+            requests.post(verify_url, json={"requestType": "VERIFY_EMAIL", "idToken": id_token})
 
             return render_template('verify.html', email=email)
 
