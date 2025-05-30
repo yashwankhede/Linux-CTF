@@ -93,48 +93,45 @@ if __name__ == '__main__':
     app.run(debug=True)
     
 # ✅ Modified /login route with email verification check
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         identifier = request.form['email']  # could be username or email
         password = request.form['password']
 
+        # Convert username to email if needed
         try:
-            # Check if identifier is a username
             if '@' not in identifier:
                 users = db.collection('users').where('username', '==', identifier).stream()
                 user_doc = next(users, None)
                 if not user_doc:
                     return render_template('login.html', error="Username not found.")
                 identifier = user_doc.to_dict()['email']
+        except Exception as e:
+            return render_template('login.html', error=str(e))
 
+        try:
             import requests
             firebase_api_key = os.getenv("FIREBASE_API_KEY")
             login_url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={firebase_api_key}"
-            resp = requests.post(login_url, json={
-                "email": identifier,
-                "password": password,
-                "returnSecureToken": True
-            })
-
+            resp = requests.post(login_url, json={"email": identifier, "password": password, "returnSecureToken": True})
             if resp.status_code == 200:
                 data = resp.json()
+
+                # NOW CHECK IF EMAIL IS VERIFIED
                 id_token = data['idToken']
-
-                # Verify if the email is verified using a secure token refresh
-                get_account_info_url = f"https://identitytoolkit.googleapis.com/v1/accounts:lookup?key={firebase_api_key}"
-                info_resp = requests.post(get_account_info_url, json={"idToken": id_token})
-
-                if info_resp.status_code == 200:
-                    user_info = info_resp.json()['users'][0]
-                    if not user_info.get('emailVerified', False):
+                lookup_url = f"https://identitytoolkit.googleapis.com/v1/accounts:lookup?key={firebase_api_key}"
+                lookup_resp = requests.post(lookup_url, json={"idToken": id_token})
+                if lookup_resp.status_code == 200:
+                    user_info = lookup_resp.json().get("users", [])[0]
+                    if not user_info.get("emailVerified", False):
                         return render_template('login.html', error="Please verify your email before logging in.")
-                    
-                    session['uid'] = user_info['localId']
-                    return f"<h3>Login success! Welcome, {identifier}</h3>"
+                else:
+                    return render_template('login.html', error="Failed to verify email status.")
 
-                return render_template('login.html', error="Could not verify email status.")
+                # Store session and proceed
+                session['uid'] = data['localId']
+                return f"<h3>Login success! Welcome, {identifier}</h3>"
 
             return render_template('login.html', error="Invalid credentials.")
 
