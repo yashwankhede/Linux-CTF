@@ -54,6 +54,13 @@
     <form method="POST" action="/verify-invite">
       <div class="user-box">
         <input type="text" name="invite" required>
+        <p style="color: #03f484; margin-top: -15px; margin-bottom: 10px; font-size: 0.9rem;">
+          Already a member? 
+          <a href="{{ url_for('login') }}" style="color: #03f484; text-decoration: underline;">Login here</a>
+        </p>
+        <p style="color: #ff4f4f; font-size: 0.8rem; margin-top: 0;">
+          Hint: There are disallowed paths
+        </p>
         <label>Invite Code</label>
       </div>
       <button class="glow-button">
