@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Profile | GCL Platform</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: 'Share Tech Mono', monospace;
+      background: linear-gradient(#0f0f0f, #1a1a1a);
+      color: #03f484;
+      margin: 0;
+      display: flex;
+    }
+
+    .sidebar {
+      width: 200px;
+      height: 100vh;
+      background: #111;
+      padding: 20px;
+      box-shadow: 3px 0 10px #03f48460;
+    }
+
+    .sidebar h2 {
+      font-size: 20px;
+      margin-bottom: 30px;
+    }
+
+    .sidebar a {
+      display: block;
+      color: #03f484;
+      margin-bottom: 15px;
+      text-decoration: none;
+    }
+
+    .sidebar a:hover {
+      text-shadow: 0 0 10px #03f484;
+    }
+
+    .content {
+      flex: 1;
+      padding: 40px;
+    }
+
+    .profile-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+
+    .profile-header img {
+      width: 120px;
+      height: 120px;
+      object-fit: cover;
+      border-radius: 50%;
+      border: 2px solid #03f484;
+      margin-right: 30px;
+    }
+
+    .upload-form {
+      margin-top: 10px;
+    }
+
+    .upload-form input[type="file"] {
+      margin-top: 8px;
+    }
+
+    .upload-form button {
+      margin-top: 8px;
+      background: transparent;
+      border: 1px solid #03f484;
+      color: #03f484;
+      padding: 4px 12px;
+      cursor: pointer;
+    }
+
+    .upload-form button:hover {
+      background: #03f484;
+      color: black;
+    }
+
+    canvas {
+      margin-top: 20px;
+      background: #111;
+      border: 1px solid #03f48450;
+      border-radius: 8px;
+      padding: 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="sidebar">
+    <h2>Linux CTF</h2>
+    <a href="/dashboard">Modules</a>
+    <a href="/profile">Profile</a>
+    <a href="/settings">Settings</a>
+  </div>
+
+  <div class="content">
+    <div class="profile-header">
+      <div>
+        <img src="/profile-photo/{{ user_id }}" alt="Profile Photo" />
+        <form class="upload-form" action="/upload-photo" method="POST" enctype="multipart/form-data">
+          <input type="file" name="photo" accept="image/*" required />
+          <button type="submit">Upload</button>
+        </form>
+      </div>
+      <div>
+        <h2>{{ username }}</h2>
+        <p>Email: {{ email }}</p>
+        <p>Levels Completed: {{ last_completed_level }}</p>
+      </div>
+    </div>
+
+    <h3>Streak Graph</h3>
+    <canvas id="streakChart" width="600" height="150"></canvas>
+  </div>
+
+  <script>
+    const ctx = document.getElementById('streakChart').getContext('2d');
+    const streakChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: {{ streak_labels|safe }},
+        datasets: [{
+          label: 'Streaks',
+          data: {{ streak_data|safe }},
+          backgroundColor: '#03f484'
+        }]
+      },
+      options: {
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
+    });
+  </script>
+</body>
+
+</html>

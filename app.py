@@ -150,6 +150,14 @@ def check_username():
     taken = any(users)
     return jsonify({"available": not taken})
 
+from datetime import datetime, timedelta
+from google.cloud import storage
+import json
+
+storage_client = storage.Client()
+bucket_name = 'gcl-profile-storage'  # replace with your actual GCS bucket name
+
+
 @app.route('/submit-flag', methods=['POST'])
 def submit_flag():
     if 'uid' not in session:
@@ -173,9 +181,21 @@ def submit_flag():
     correct_flag = flag_doc.to_dict().get('flag')
 
     if submitted_flag == correct_flag:
+        # Update progress in Firestore
         db.collection('users').document(user_id).update({
             'last_completed_level': next_level
         })
+
+        # Update streak data in GCS
+        today_str = datetime.utcnow().strftime('%Y-%m-%d')
+        blob = storage_client.bucket(bucket_name).blob(f'user_streaks/{user_id}.json')
+        if blob.exists():
+            streak_data = json.loads(blob.download_as_text())
+        else:
+            streak_data = {}
+        streak_data[today_str] = True
+        blob.upload_from_string(json.dumps(streak_data), content_type='application/json')
+
         return jsonify({"success": True, "message": f"Level {next_level} completed!"})
     else:
         return jsonify({"success": False, "message": "Incorrect flag. Try again!"})
@@ -197,3 +217,104 @@ def dashboard():
     
 if __name__ == '__main__':
     app.run(debug=True)
+    
+# GCP bucket configuration
+
+from google.cloud import storage
+from flask import send_file
+import io
+
+# Ensure credentials are loaded
+storage_client = storage.Client()
+bucket_name = 'gcl-profile-storage'  # your GCS bucket name
+
+@app.route('/profile')
+def profile():
+    if 'uid' not in session:
+        return redirect('/login')
+    
+    uid = session['uid']
+    user_doc = db.collection('users').document(uid).get()
+    if not user_doc.exists:
+        return "User not found", 404
+
+    user_data = user_doc.to_dict()
+
+    # Load streak data from GCS
+    streak_blob = storage_client.bucket(bucket_name).blob(f'user_streaks/{uid}.json')
+    if streak_blob.exists():
+        streak_data = json.loads(streak_blob.download_as_text())
+    else:
+        streak_data = {}
+
+    # Prepare 6-week grid
+    today = datetime.utcnow().date()
+    grid = []
+    for i in range(42):  # past 6 weeks
+        day = today - timedelta(days=41 - i)
+        grid.append({
+            "date": str(day),
+            "active": streak_data.get(str(day), False)
+        })
+    
+    user_data["streak_grid"] = grid
+
+    return render_template('profile.html', user=user_data)
+
+@app.route('/upload-profile-photo', methods=['POST'])
+def upload_photo():
+    if 'uid' not in session or 'photo' not in request.files:
+        return redirect('/profile')
+
+    uid = session['uid']
+    photo = request.files['photo']
+
+    blob = storage_client.bucket(bucket_name).blob(f'profile_photos/{uid}.jpg')
+    blob.upload_from_file(photo.stream, content_type=photo.content_type)
+
+    return redirect('/profile')
+
+from flask import send_file
+from werkzeug.utils import secure_filename
+from io import BytesIO
+
+@app.route('/upload-photo', methods=['POST'])
+def upload_photo():
+    if 'uid' not in session:
+        return redirect('/login')
+    
+    file = request.files.get('photo')
+    if not file:
+        return redirect('/profile')
+
+    uid = session['uid']
+    filename = secure_filename(f"{uid}.jpg")
+    blob = storage_client.bucket(bucket_name).blob(f"profile_photos/{filename}")
+    blob.upload_from_file(file, content_type='image/jpeg')
+
+    return redirect('/profile')
+
+@app.route('/profile-photo/<uid>')
+def get_profile_photo(uid):
+    blob = storage_client.bucket(bucket_name).blob(f'profile_photos/{uid}.jpg')
+    if not blob.exists():
+        return send_file('static/default.jpg', mimetype='image/jpeg')
+
+    photo_stream = io.BytesIO()
+    blob.download_to_file(photo_stream)
+    photo_stream.seek(0)
+    return send_file(photo_stream, mimetype='image/jpeg')
+
+@app.route('/users')
+def all_users():
+    users_ref = db.collection('users').stream()
+    users = []
+    for doc in users_ref:
+        user = doc.to_dict()
+        users.append({
+            "username": user.get("username"),
+            "level": user.get("last_completed_level", 0),
+            "uid": user.get("uid")
+        })
+    users.sort(key=lambda x: x["level"], reverse=True)
+    return render_template("leaderboard.html", users=users)
