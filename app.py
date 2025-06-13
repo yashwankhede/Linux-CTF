@@ -92,9 +92,6 @@ def robots():
 @app.route('/.hidden/<path:filename>')
 def hidden_file(filename):
     return send_from_directory('static/.hidden', filename)
-
-if __name__ == '__main__':
-    app.run(debug=True)
     
 # ✅ Modified /login route with email verification check
 @app.route('/login', methods=['GET', 'POST'])
@@ -135,7 +132,7 @@ def login():
 
                 # Store session and proceed
                 session['uid'] = data['localId']
-                return f"<h3>Login success! Welcome, {identifier}</h3>"
+                return redirect('/dashboard')
 
             return render_template('login.html', error="Invalid credentials.")
 
@@ -152,3 +149,51 @@ def check_username():
     users = db.collection('users').where('username', '==', username).stream()
     taken = any(users)
     return jsonify({"available": not taken})
+
+@app.route('/submit-flag', methods=['POST'])
+def submit_flag():
+    if 'uid' not in session:
+        return jsonify({"success": False, "message": "Unauthorized"}), 401
+
+    user_id = session['uid']
+    submitted_flag = request.form.get('flag', '').strip()
+
+    # Fetch user's last completed level
+    user_doc = db.collection('users').document(user_id).get()
+    if not user_doc.exists:
+        return jsonify({"success": False, "message": "User not found"}), 404
+    user_data = user_doc.to_dict()
+    last_completed = user_data.get('last_completed_level', 0)
+    next_level = last_completed + 1
+
+    # Check flag for the next level
+    flag_doc = db.collection('flags').document(f'easy-matrix{next_level}').get()
+    if not flag_doc.exists:
+        return jsonify({"success": False, "message": "Flag not configured"}), 500
+    correct_flag = flag_doc.to_dict().get('flag')
+
+    if submitted_flag == correct_flag:
+        db.collection('users').document(user_id).update({
+            'last_completed_level': next_level
+        })
+        return jsonify({"success": True, "message": f"Level {next_level} completed!"})
+    else:
+        return jsonify({"success": False, "message": "Incorrect flag. Try again!"})
+    
+@app.route('/dashboard')
+def dashboard():
+    if 'uid' not in session:
+        return redirect('/login')
+
+    user_id = session['uid']
+    user_doc = db.collection('users').document(user_id).get()
+    if not user_doc.exists:
+        return redirect('/login')
+
+    user_data = user_doc.to_dict()
+    last_completed = user_data.get('last_completed_level', 0)
+
+    return render_template('dashboard.html', last_completed_level=last_completed)
+    
+if __name__ == '__main__':
+    app.run(debug=True)
