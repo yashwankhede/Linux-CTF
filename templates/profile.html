@@ -52,61 +52,45 @@
       margin-bottom: 30px;
     }
 
-    .photo-wrapper {
+    .profile-photo-wrapper {
       position: relative;
       width: 120px;
       height: 120px;
     }
 
-    .photo-wrapper img,
-    .photo-wrapper .initials {
+    .profile-photo-wrapper img,
+    .profile-photo-wrapper .initials {
       width: 120px;
       height: 120px;
       border-radius: 50%;
       border: 2px solid #03f484;
       object-fit: cover;
       display: block;
-    }
-
-    .photo-wrapper .initials {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 40px;
-      background-color: #111;
+      text-align: center;
+      line-height: 120px;
+      font-size: 36px;
+      background: #0f0f0f;
       color: #03f484;
-      position: absolute;
-      top: 0;
-      left: 0;
-      z-index: 0;
-    }
-
-    .photo-wrapper input[type="file"] {
-      display: none;
-    }
-
-    .photo-wrapper label {
-      position: absolute;
-      bottom: -10px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 12px;
-      padding: 4px 8px;
-      border: 1px solid #03f484;
-      background-color: transparent;
-      color: #03f484;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-
-    .photo-wrapper label:hover {
-      background-color: #03f484;
-      color: #000;
     }
 
     .upload-form {
-      position: relative;
+      position: absolute;
+      bottom: -10px;
+      right: -10px;
+    }
+
+    .upload-form label {
+      cursor: pointer;
       display: inline-block;
+      padding: 5px 10px;
+      background: #03f484;
+      color: #000;
+      border-radius: 20px;
+      font-size: 12px;
+    }
+
+    .upload-form input[type="file"] {
+      display: none;
     }
 
     canvas {
@@ -129,21 +113,18 @@
 
   <div class="content">
     <div class="profile-header">
-      <div class="upload-form">
-        <form method="POST" action="/upload-photo" enctype="multipart/form-data" id="photo-form">
-          <div class="photo-wrapper">
-            <img id="profile-img" src="/profile-photo/{{ user_id }}" onerror="this.style.display='none'; document.getElementById('initials').style.display='flex';" alt="Profile Photo">
-            <div class="initials" id="initials" style="display:none;">{{ username[:1]|upper }}</div>
-            <label for="photo-upload">Upload</label>
-            <input type="file" id="photo-upload" name="photo" accept="image/*" onchange="document.getElementById('photo-form').submit()">
-          </div>
+      <div class="profile-photo-wrapper">
+        <img src="/profile-photo/{{ user.uid }}" alt="Profile Photo" onerror="this.style.display='none'; document.getElementById('initials').style.display='block';" />
+        <div class="initials" id="initials" style="display:none;">{{ user.username[:1]|upper }}</div>
+        <form class="upload-form" action="/upload-photo" method="POST" enctype="multipart/form-data">
+          <label for="photo">Change</label>
+          <input id="photo" type="file" name="photo" accept="image/*" onchange="this.form.submit();" />
         </form>
       </div>
-
       <div style="margin-left: 30px;">
-        <h2>{{ username }}</h2>
-        <p>Email: {{ email }}</p>
-        <p>Levels Completed: {{ last_completed_level }}</p>
+        <h2>{{ user.username }}</h2>
+        <p>Email: {{ user.email }}</p>
+        <p>Levels Completed: {{ user.last_completed_level }}</p>
       </div>
     </div>
 
