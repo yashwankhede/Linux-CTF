@@ -23,7 +23,7 @@ app = Flask(__name__)
 app.secret_key = 'key_to_success'  # Replace this in production
 
 # Constants
-VALID_INVITE = "GCL{L3t_5t4rt_7h3_g4m3}"
+VALID_INVITE = os.getenv("INVITE_CODE")
 bucket_name = 'gcl-profile-storage'
 storage_client = storage.Client()
 
