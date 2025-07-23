@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 import io
 import os
 import json
+import requests
 
 # Load environment
 load_dotenv()
