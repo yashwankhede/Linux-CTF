@@ -220,17 +220,19 @@ def profile():
         streak_data = {}
 
     today = datetime.utcnow().date()
+    start_date = today - timedelta(days=today.weekday() + 364)  # go back 1 year aligned to Monday
     grid = []
-    for i in range(42):
-        day = today - timedelta(days=41 - i)
+
+    for i in range(371):  # slightly more than 365 to align visually
+        day = start_date + timedelta(days=i)
         grid.append({
             "date": str(day),
             "active": streak_data.get(str(day), False)
         })
-    
+
     user_data["streak_grid"] = grid
 
-    return render_template('profile.html', user=user_data)
+    return render_template('profile.html', user=user_data, streak_data=user_data["streak_grid"])
 
 @app.route('/upload-photo', methods=['POST'])
 def upload_photo():

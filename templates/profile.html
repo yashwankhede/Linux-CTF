@@ -129,28 +129,40 @@
     </div>
 
     <h3>Streak Graph</h3>
-    <canvas id="streakChart" width="600" height="150"></canvas>
+    <div id="streakGrid" style="display: flex;"></div>
   </div>
 
-  <script>
-    const ctx = document.getElementById('streakChart').getContext('2d');
-    const streakChart = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: {{ streak_labels|safe }},
-        datasets: [{
-          label: 'Streaks',
-          data: {{ streak_data|safe }},
-          backgroundColor: '#03f484'
-        }]
-      },
-      options: {
-        scales: {
-          y: { beginAtZero: true }
-        }
-      }
+<script>
+  const streakData = {{ streak_data | tojson }};
+  const container = document.getElementById('streakGrid');
+  
+  // Convert to weeks (columns)
+  const weeks = [];
+  streakData.forEach((entry, i) => {
+    const week = Math.floor(i / 7);
+    if (!weeks[week]) weeks[week] = [];
+    weeks[week].push(entry);
+  });
+
+  weeks.forEach(week => {
+    const weekCol = document.createElement("div");
+    weekCol.style.display = "flex";
+    weekCol.style.flexDirection = "column";
+    weekCol.style.marginRight = "2px";
+
+    week.forEach(day => {
+      const cell = document.createElement("div");
+      cell.style.width = "12px";
+      cell.style.height = "12px";
+      cell.style.margin = "1px";
+      cell.style.borderRadius = "2px";
+      cell.style.backgroundColor = day.active ? "#03f484" : "#111";
+      weekCol.appendChild(cell);
     });
-  </script>
+
+    container.appendChild(weekCol);
+  });
+</script>
 </body>
 
 </html>
