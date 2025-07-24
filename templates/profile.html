@@ -114,7 +114,8 @@
   <div class="content">
     <div class="profile-header">
       <div class="profile-photo-wrapper">
-        <img src="/profile-photo/{{ user.uid }}" alt="Profile Photo" onerror="this.style.display='none'; document.getElementById('initials').style.display='block';" />
+        <img src="/profile-photo/{{ user.uid }}" alt="Profile Photo"
+          onerror="this.style.display='none'; document.getElementById('initials').style.display='block';" />
         <div class="initials" id="initials" style="display:none;">{{ user.username[:1]|upper }}</div>
         <form class="upload-form" action="/upload-photo" method="POST" enctype="multipart/form-data">
           <label for="photo">Change</label>
@@ -129,40 +130,50 @@
     </div>
 
     <h3>Streak Graph</h3>
-    <div id="streakGrid" style="display: flex;"></div>
-  </div>
+    <div style="display: flex; align-items: center; gap: 20px;">
+      <div id="yearLabels" style="display: flex; flex-direction: column; font-size: 12px;">
+        <div>Mon</div>
+        <div>Wed</div>
+        <div>Fri</div>
+      </div>
+      <div id="streakGrid" style="display: flex;"></div>
+    </div>
+    <div style="margin-top: 10px; font-size: 12px; color: #999;">
+      {{ start_year }} – {{ current_year }}
+    </div>
 
-<script>
-  const streakData = {{ streak_data | tojson }};
-  const container = document.getElementById('streakGrid');
-  
-  // Convert to weeks (columns)
-  const weeks = [];
-  streakData.forEach((entry, i) => {
-    const week = Math.floor(i / 7);
-    if (!weeks[week]) weeks[week] = [];
-    weeks[week].push(entry);
-  });
+    <script>
+      const streakData = {{ streak_data | tojson }};
+      const grid = document.getElementById("streakGrid");
 
-  weeks.forEach(week => {
-    const weekCol = document.createElement("div");
-    weekCol.style.display = "flex";
-    weekCol.style.flexDirection = "column";
-    weekCol.style.marginRight = "2px";
+      const weeks = [];
+      streakData.forEach((entry, i) => {
+        const week = Math.floor(i / 7);
+        if (!weeks[week]) weeks[week] = [];
+        weeks[week].push(entry);
+      });
 
-    week.forEach(day => {
-      const cell = document.createElement("div");
-      cell.style.width = "12px";
-      cell.style.height = "12px";
-      cell.style.margin = "1px";
-      cell.style.borderRadius = "2px";
-      cell.style.backgroundColor = day.active ? "#03f484" : "#111";
-      weekCol.appendChild(cell);
-    });
+      weeks.forEach((week, i) => {
+        const weekCol = document.createElement("div");
+        weekCol.style.display = "flex";
+        weekCol.style.flexDirection = "column";
+        weekCol.style.marginRight = "2px";
 
-    container.appendChild(weekCol);
-  });
-</script>
+        week.forEach(day => {
+          const cell = document.createElement("div");
+          cell.title = `${day.date} - ${day.active ? '✓' : '✗'}`;
+          cell.style.width = "11px";
+          cell.style.height = "11px";
+          cell.style.margin = "1px";
+          cell.style.borderRadius = "2px";
+          cell.style.backgroundColor = day.active ? "#03f484" : "#2a2a2a";  // darker gray
+          weekCol.appendChild(cell);
+        });
+
+        grid.appendChild(weekCol);
+      });
+    </script>
+
 </body>
 
 </html>
