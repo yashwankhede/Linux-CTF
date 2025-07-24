@@ -231,8 +231,13 @@ def profile():
         })
 
     user_data["streak_grid"] = grid
-
-    return render_template('profile.html', user=user_data, streak_data=user_data["streak_grid"])
+    return render_template(
+        'profile.html',
+        user=user_data,
+        streak_data=user_data["streak_grid"],
+        start_year=start_date.year,
+        current_year=today.year
+    )
 
 @app.route('/upload-photo', methods=['POST'])
 def upload_photo():
