@@ -330,3 +330,50 @@ def settings():
             flash("Email update failed.")
 
     return render_template('settings.html', user=user)
+
+@app.route('/change-email', methods=['POST'])
+def change_email():
+    if 'uid' not in session:
+        return redirect('/login')
+
+    uid = session['uid']
+    new_email = request.form.get('new_email')
+    current_password = request.form.get('current_password')
+
+    user_doc = db.collection('users').document(uid).get()
+    if not user_doc.exists:
+        return "User not found", 404
+
+    user_data = user_doc.to_dict()
+    current_email = user_data.get("email")
+
+    api_key = os.getenv("FIREBASE_API_KEY")
+
+    # Step 1: Authenticate user with current password
+    signin_url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={api_key}"
+    auth_resp = requests.post(signin_url, json={
+        "email": current_email,
+        "password": current_password,
+        "returnSecureToken": True
+    })
+
+    if auth_resp.status_code != 200:
+        return render_template("settings.html", user=user_data, error="Current password incorrect.")
+
+    id_token = auth_resp.json()["idToken"]
+
+    # Step 2: Send verification email for new email
+    update_url = f"https://identitytoolkit.googleapis.com/v1/accounts:update?key={api_key}"
+    update_resp = requests.post(update_url, json={
+        "idToken": id_token,
+        "email": new_email,
+        "returnSecureToken": True
+    })
+
+    if update_resp.status_code != 200:
+        return render_template("settings.html", user=user_data, error="Email change failed.")
+
+    # Step 3: Update Firestore after verification sent
+    db.collection('users').document(uid).update({"email": new_email})
+
+    return render_template("settings.html", user=user_data, success="Verification email sent to new address.")
