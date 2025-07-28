@@ -289,7 +289,7 @@ def settings():
     
     uid = session['uid']
     user_doc = db.collection('users').document(uid).get()
-    if not user_doc.exists():
+    if not user_doc.exists:
         return "User not found", 404
     
     user = user_doc.to_dict()
