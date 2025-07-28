@@ -281,3 +281,52 @@ def all_users():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+@app.route('/settings', methods=['GET', 'POST'])
+def settings():
+    if 'uid' not in session:
+        return redirect('/login')
+    
+    uid = session['uid']
+    user_doc = db.collection('users').document(uid).get()
+    if not user_doc.exists():
+        return "User not found", 404
+    
+    user = user_doc.to_dict()
+
+    if request.method == 'POST':
+        new_email = request.form.get('new_email', '').strip()
+        password = request.form.get('password', '').strip()
+
+        if not new_email or not password:
+            flash("Email and password are required.")
+            return redirect('/settings')
+
+        # Sign in to get ID token
+        api_key = os.getenv("FIREBASE_API_KEY")
+        sign_url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={api_key}"
+        sign_resp = requests.post(sign_url, json={
+            "email": user['email'],
+            "password": password,
+            "returnSecureToken": True
+        })
+        if sign_resp.status_code != 200:
+            flash("Re-authentication failed.")
+            return redirect('/settings')
+
+        id_token = sign_resp.json()['idToken']
+
+        # Request email change with verification
+        verify_url = f"https://identitytoolkit.googleapis.com/v1/accounts:update?key={api_key}"
+        change_resp = requests.post(verify_url, json={
+            "idToken": id_token,
+            "email": new_email,
+            "returnSecureToken": True
+        })
+
+        if change_resp.status_code == 200:
+            flash("Verification email sent to your new address. Please verify to complete the change.")
+        else:
+            flash("Email update failed.")
+
+    return render_template('settings.html', user=user)
