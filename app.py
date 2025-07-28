@@ -377,3 +377,8 @@ def change_email():
     db.collection('users').document(uid).update({"email": new_email})
 
     return render_template("settings.html", user=user_data, success="Verification email sent to new address.")
+
+@app.route('/logout', methods=['POST'])
+def logout():
+    session.clear()
+    return redirect('/')

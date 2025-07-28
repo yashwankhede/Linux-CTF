@@ -20,10 +20,10 @@
                 },
                 body: JSON.stringify({ level, flag })
             }).then(resp => resp.json())
-              .then(data => {
-                  alert(data.message);
-                  if (data.success) location.reload();
-              });
+                .then(data => {
+                    alert(data.message);
+                    if (data.success) location.reload();
+                });
         }
     </script>
     <style>
@@ -34,6 +34,7 @@
             margin: 0;
             display: flex;
         }
+
         .sidebar {
             width: 200px;
             height: 100vh;
@@ -41,26 +42,32 @@
             padding: 20px;
             box-shadow: 3px 0 10px #03f48460;
         }
+
         .sidebar h2 {
             font-size: 20px;
             margin-bottom: 30px;
         }
+
         .sidebar a {
             display: block;
             color: #03f484;
             margin-bottom: 15px;
             text-decoration: none;
         }
+
         .sidebar a:hover {
             text-shadow: 0 0 10px #03f484;
         }
+
         .content {
             flex: 1;
             padding: 40px;
         }
+
         .module-section {
             margin-bottom: 40px;
         }
+
         .level {
             margin-bottom: 20px;
             background: #111;
@@ -68,10 +75,12 @@
             border-radius: 10px;
             box-shadow: 0 0 10px #03f48440;
         }
+
         .level.locked {
             filter: blur(2px) grayscale(1);
             pointer-events: none;
         }
+
         input[type=text] {
             width: 250px;
             padding: 5px;
@@ -80,6 +89,7 @@
             border: 1px solid #03f484;
             font-family: inherit;
         }
+
         button {
             background: transparent;
             border: 1px solid #03f484;
@@ -87,6 +97,7 @@
             color: #03f484;
             cursor: pointer;
         }
+
         button:hover {
             background: #03f484;
             color: black;
@@ -100,6 +111,18 @@
         <a href="/dashboard">Modules</a>
         <a href="/profile">Profile</a>
         <a href="/settings">Settings</a>
+
+        <form action="/logout" method="POST" style="position: absolute; bottom: 20px; width: 160px;">
+            <button type="submit" style="
+      width: 100%;
+      background: transparent;
+      border: 1px solid red;
+      color: red;
+      padding: 6px 0;
+      font-family: 'Share Tech Mono', monospace;
+      cursor: pointer;
+    ">Logout</button>
+        </form>
     </div>
     <div class="content">
         <div class="module-section">
@@ -111,9 +134,8 @@
                 {% if i == last_completed_level + 1 %}
                 <input type="text" id="flag-input-{{ i }}" placeholder="Enter flag...">
                 <button onclick="submitFlag({{ i }})">Submit</button>
-                {% elif i <= last_completed_level %}
-                <p>✅ Completed</p>
-                {% endif %}
+                {% elif i <= last_completed_level %} <p>✅ Completed</p>
+                    {% endif %}
             </div>
             {% endfor %}
         </div>
