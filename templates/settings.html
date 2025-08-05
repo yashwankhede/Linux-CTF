@@ -22,6 +22,7 @@
             background: #111;
             padding: 20px;
             box-shadow: 3px 0 10px #03f48460;
+            position: relative;
         }
 
         .sidebar h2 {
@@ -115,6 +116,46 @@
             margin: 30px 0 20px;
             border-top: 1px solid #03f48430;
         }
+
+        .logout-btn {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 160px;
+        }
+
+        .logout-btn button {
+            width: 100%;
+            background: transparent;
+            border: 1px solid red;
+            color: red;
+            padding: 6px 0;
+            font-family: 'Share Tech Mono', monospace;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        .logout-btn button:hover {
+            background: red;
+            color: black;
+        }
+
+        .message {
+            margin-bottom: 20px;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .message.success {
+            background-color: #014d01;
+            color: #00ff00;
+        }
+
+        .message.error {
+            background-color: #4d0101;
+            color: #ff3333;
+        }
     </style>
 </head>
 
@@ -125,22 +166,21 @@
         <a href="/profile">Profile</a>
         <a href="/settings">Settings</a>
 
-        <form action="/logout" method="POST" style="position: absolute; bottom: 20px; width: 160px;">
-            <button type="submit" style="
-      width: 100%;
-      background: transparent;
-      border: 1px solid red;
-      color: red;
-      padding: 6px 0;
-      font-family: 'Share Tech Mono', monospace;
-      cursor: pointer;
-    ">Logout</button>
+        <form action="/logout" method="POST" class="logout-btn">
+            <button type="submit">Logout</button>
         </form>
     </div>
 
     <div class="content">
         <div class="settings-box">
             <h2>Account Settings</h2>
+
+            {% if success %}
+            <div class="message success">{{ success }}</div>
+            {% endif %}
+            {% if error %}
+            <div class="message error">{{ error }}</div>
+            {% endif %}
 
             <form action="/settings" method="POST">
                 <div class="form-group">
@@ -149,13 +189,18 @@
                 </div>
 
                 <div class="form-group">
+                    <label>Current Password</label>
+                    <input type="password" name="current_password" placeholder="Enter current password" required />
+                </div>
+
+                <div class="form-group">
                     <label>New Password</label>
-                    <input type="password" name="new_password" placeholder="Enter new password" />
+                    <input type="password" name="new_password" placeholder="Enter new password" required />
                 </div>
 
                 <div class="form-group">
                     <label>Confirm Password</label>
-                    <input type="password" name="confirm_password" placeholder="Confirm new password" />
+                    <input type="password" name="confirm_password" placeholder="Confirm new password" required />
                 </div>
 
                 <div class="form-actions">
@@ -174,8 +219,7 @@
 
                 <div class="form-group">
                     <label>Current Password</label>
-                    <input type="password" name="current_password" placeholder="Verify with current password"
-                        required />
+                    <input type="password" name="current_password" placeholder="Verify with current password" required />
                 </div>
 
                 <div class="form-actions">

@@ -1,161 +1,219 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard | Linux CTF</title>
-    <link rel="stylesheet" href="/static/style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
-    <script>
-        function submitFlag(level) {
-            const input = document.getElementById(`flag-input-${level}`);
-            const flag = input.value.trim();
-            if (!flag) return alert("Please enter a flag.");
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard | Linux CTF</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
 
-            fetch("/submit-flag", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ level, flag })
-            }).then(resp => resp.json())
-                .then(data => {
-                    alert(data.message);
-                    if (data.success) location.reload();
-                });
-        }
-    </script>
-    <style>
-        body {
-            font-family: 'Share Tech Mono', monospace;
-            background: linear-gradient(#0f0f0f, #1a1a1a);
-            color: #03f484;
-            margin: 0;
-            display: flex;
-        }
+  <script>
+    // Submit as application/x-www-form-urlencoded (matches Flask request.form)
+    function submitFlag(level) {
+      const input = document.getElementById(`flag-input-${level}`);
+      const flag = (input?.value || "").trim();
+      if (!flag) return alert("Please enter a flag.");
 
-        .sidebar {
-            width: 200px;
-            height: 100vh;
-            background: #111;
-            padding: 20px;
-            box-shadow: 3px 0 10px #03f48460;
-        }
+      const body = new URLSearchParams();
+      body.append("flag", flag);
 
-        .sidebar h2 {
-            font-size: 20px;
-            margin-bottom: 30px;
-        }
+      fetch("/submit-flag", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body
+      })
+      .then(r => r.json())
+      .then(data => {
+        alert(data.message || "Submitted.");
+        if (data.success) location.reload();
+      })
+      .catch(() => alert("Network error. Try again."));
+    }
 
-        .sidebar a {
-            display: block;
-            color: #03f484;
-            margin-bottom: 15px;
-            text-decoration: none;
-        }
+    function copyToClipboard(text, msg = "Copied!") {
+      navigator.clipboard.writeText(text).then(() => {
+        const n = document.getElementById("copy-note");
+        if (!n) return;
+        n.textContent = msg;
+        n.style.opacity = 1;
+        setTimeout(() => (n.style.opacity = 0), 1200);
+      });
+    }
+  </script>
 
-        .sidebar a:hover {
-            text-shadow: 0 0 10px #03f484;
-        }
+  <style>
+    :root { --neon:#03f484; --bg:#0e0e0e; --panel:#111; --muted:#98ffa8; }
 
-        .content {
-            flex: 1;
-            padding: 40px;
-        }
+    body {
+      font-family: 'Share Tech Mono', monospace;
+      background: radial-gradient(1200px 700px at 20% -10%, #0b1e12 0%, #0f0f0f 40%, #0f0f0f 100%);
+      color: var(--neon);
+      margin: 0; display: flex;
+    }
+    .sidebar {
+      width: 280px; min-width: 260px; height: 100vh; position: sticky; top:0;
+      background: var(--panel); padding: 22px 20px 90px;
+      box-shadow: 3px 0 18px #03f48440; overflow-y: auto;
+    }
+    .brand { font-size: 22px; letter-spacing: 1px; margin: 0 0 18px; }
+    .nav a {
+      display: block; padding: 8px 0; text-decoration: none; color: var(--neon);
+      opacity: .9;
+    }
+    .nav a:hover { text-shadow: 0 0 10px var(--neon); opacity: 1; }
 
-        .module-section {
-            margin-bottom: 40px;
-        }
+    .quick {
+      margin-top: 18px; background: #0b0b0b; border: 1px solid #0f3; border-radius: 10px;
+      padding: 14px 14px 10px; box-shadow: inset 0 0 12px #03f48425;
+    }
+    .quick h3 { margin: 0 0 10px; font-size: 16px; }
+    .k { background:#000; border:1px solid var(--neon); padding:8px 10px; border-radius:6px; display:block; word-break:break-all;}
+    .subtle { color: var(--muted); font-size: 12px; margin-top: 8px; }
+    .badge { display:inline-block; border:1px solid var(--neon); padding:2px 8px; border-radius:999px; font-size:11px; margin-left:6px; opacity:.85;}
+    .copy-row { display:flex; gap:8px; align-items:center; margin-top:8px; }
+    .ghost-btn {
+      background: transparent; border: 1px solid var(--neon); color: var(--neon);
+      padding: 6px 10px; cursor: pointer; border-radius: 6px;
+    }
+    .ghost-btn:hover { background: var(--neon); color:#000; }
+    #copy-note { transition: opacity .2s; opacity:0; font-size:12px; color:var(--muted); }
 
-        .level {
-            margin-bottom: 20px;
-            background: #111;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px #03f48440;
-        }
+    .content { flex: 1; padding: 34px 40px 70px; }
+    .module-section { margin-bottom: 36px; }
+    .module-section h2 { margin: 0 0 14px; }
+    .divider { height:1px; background: linear-gradient(90deg, transparent, #03f48455, transparent); margin: 16px 0 22px; }
 
-        .level.locked {
-            filter: blur(2px) grayscale(1);
-            pointer-events: none;
-        }
+    .level {
+      margin-bottom: 18px; background: var(--panel); padding: 18px; border-radius: 12px;
+      box-shadow: 0 0 12px #03f4842d; border:1px solid #073; position: relative;
+    }
+    .level h3 { margin: 0 0 6px; display:flex; align-items:center; gap:8px; }
+    .level.locked { filter: grayscale(1) blur(1px); opacity:.75; pointer-events:none; }
+    .meta { color: var(--muted); font-size: 12px; margin-bottom: 8px; }
 
-        input[type=text] {
-            width: 250px;
-            padding: 5px;
-            background: #000;
-            color: #03f484;
-            border: 1px solid #03f484;
-            font-family: inherit;
-        }
+    input[type=text]{
+      width: 280px; padding: 7px 8px; background:#000; color:var(--neon);
+      border:1px solid var(--neon); border-radius: 6px; font-family: inherit;
+    }
+    button {
+      background: transparent; border: 1px solid var(--neon);
+      padding: 7px 14px; color: var(--neon); cursor: pointer; border-radius: 6px;
+    }
+    button:hover { background: var(--neon); color: #000; }
 
-        button {
-            background: transparent;
-            border: 1px solid #03f484;
-            padding: 5px 15px;
-            color: #03f484;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background: #03f484;
-            color: black;
-        }
-    </style>
+    .logout-form { position: sticky; bottom: 16px; margin-top: 22px; }
+    .logout-form button { border-color: #f44; color:#f66; width: 100%; }
+    .logout-form button:hover { background:#f44; color:#000; }
+  </style>
 </head>
 
 <body>
-    <div class="sidebar">
-        <h2>Linux CTF</h2>
-        <a href="/dashboard">Modules</a>
-        <a href="/profile">Profile</a>
-        <a href="/settings">Settings</a>
+  <aside class="sidebar">
+    <h1 class="brand">Linux CTF <span class="badge">Easy</span></h1>
 
-        <form action="/logout" method="POST" style="position: absolute; bottom: 20px; width: 160px;">
-            <button type="submit" style="
-      width: 100%;
-      background: transparent;
-      border: 1px solid red;
-      color: red;
-      padding: 6px 0;
-      font-family: 'Share Tech Mono', monospace;
-      cursor: pointer;
-    ">Logout</button>
-        </form>
-    </div>
-    <div class="content">
-        <div class="module-section">
-            <h2>Easy Module</h2>
-            {% for i in range(1, 11) %}
-            <div class="level {% if last_completed_level + 1 < i %}locked{% endif %}">
-                <h3>Level {{ i }}</h3>
-                <p>Description for level {{ i }} task here.</p>
-                {% if i == last_completed_level + 1 %}
-                <input type="text" id="flag-input-{{ i }}" placeholder="Enter flag...">
-                <button onclick="submitFlag({{ i }})">Submit</button>
-                {% elif i <= last_completed_level %} <p>✅ Completed</p>
-                    {% endif %}
-            </div>
-            {% endfor %}
-        </div>
+    <nav class="nav">
+      <a href="/dashboard">Modules</a>
+      <a href="/profile">Profile</a>
+      <a href="/settings">Settings</a>
+    </nav>
 
-        <div class="module-section">
-            <h2>Hard Module</h2>
-            <div class="level locked">
-                <h3>Locked</h3>
-                <p>Unlock by completing Easy module.</p>
-            </div>
-        </div>
+    <div class="divider"></div>
 
-        <div class="module-section">
-            <h2>Advance Module</h2>
-            <div class="level locked">
-                <h3>Locked</h3>
-                <p>Unlock by completing Hard module.</p>
-            </div>
-        </div>
-    </div>
+    <!-- QUICK START -->
+    <section class="quick">
+      <h3>Quick Start</h3>
+      <div class="meta">Host</div>
+      <div class="k">linux-ctf.matrixploit.com</div>
+
+      <div class="meta" style="margin-top:8px;">SSH Port</div>
+      <div class="k">42424</div>
+
+      <div class="meta" style="margin-top:8px;">First User</div>
+      <div class="k">easy-matrix0</div>
+
+      <div class="meta" style="margin-top:8px;">Password for easy-matrix0</div>
+      <div class="k">GCL{7hi5_1s_a_Fl4g}</div>
+
+      <div class="copy-row">
+        <button class="ghost-btn"
+                onclick="copyToClipboard('ssh -p 42424 easy-matrix0@linux-ctf.matrixploit.com')">
+          Copy SSH command
+        </button>
+        <span id="copy-note">Copied!</span>
+      </div>
+
+      <p class="subtle" style="margin-top:10px;">
+        Flags look like <b>GCL{...}</b>. Submit each flag below to record progress.
+        The flag found inside <b>easy-matrix0</b> is
+        <b>GCL{L37s_B3g3n_7h3_G4m3}</b> — it becomes the password for <b>easy-matrix1</b>.
+      </p>
+    </section>
+
+    <section class="quick" style="margin-top:14px;">
+      <h3>How it works</h3>
+      <ol class="subtle" style="margin-left:14px;">
+        <li>SSH into the current user (start at <b>easy-matrix0</b>).</li>
+        <li>Complete the task and find the flag <b>GCL{...}</b>.</li>
+        <li>Submit the flag here to unlock the next level.</li>
+        <li>Use that flag as the <b>password</b> to SSH into the next user.</li>
+      </ol>
+      <p class="subtle">Environment is restricted (rbash). Stay in your home directory—no privilege escalation required.</p>
+    </section>
+
+    <form action="/logout" method="POST" class="logout-form">
+      <button type="submit">Logout</button>
+    </form>
+  </aside>
+
+  <main class="content">
+    <section class="module-section">
+      <h2>Easy Module</h2>
+
+      {% set level_descriptions = [
+        'Get oriented. Learn the format. The first login password is shown in the sidebar.',
+        'Explore hidden files and directories to discover the flag.',
+        'Handle filenames beginning with a dash (hint: paths or “--”).',
+        'Decode a Base64 string to reveal the flag.',
+        'Hunt for disallowed paths and clues in robots.txt.',
+        'Tame a filename with a tab character sneaked inside.',
+        'Use grep to search through files for the flag.',
+        'Mind case sensitivity when matching text.',
+        'Write a tiny regex (or tool) to extract the flag from noise.',
+        'The flag hides in a paragraph—slow down and read carefully.',
+        'Unpack the “treasure chest” archive and retrieve the flag.'
+      ] %}
+
+      {% for i in range(1, 11) %}
+      <div class="level {% if last_completed_level + 1 < i %}locked{% endif %}">
+        <h3>Level {{ i }}</h3>
+        <div class="meta">User: <b>easy-matrix{{ i-1 }}</b> → Next: <b>easy-matrix{{ i }}</b></div>
+        <p>{{ level_descriptions[i-1] }}</p>
+
+        {% if i == last_completed_level + 1 %}
+          <input type="text" id="flag-input-{{ i }}" placeholder="Enter flag e.g., GCL{...}" />
+          <button onclick="submitFlag({{ i }})">Submit</button>
+        {% elif i <= last_completed_level %}
+          <p>✅ Completed</p>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </section>
+
+    <section class="module-section">
+      <h2>Hard Module</h2>
+      <div class="level locked">
+        <h3>Locked</h3>
+        <p>Unlock by completing the Easy module.</p>
+      </div>
+    </section>
+
+    <section class="module-section">
+      <h2>Advanced Module</h2>
+      <div class="level locked">
+        <h3>Locked</h3>
+        <p>Unlock by completing the Hard module.</p>
+      </div>
+    </section>
+  </main>
 </body>
-
 </html>
