@@ -1,191 +1,196 @@
+<!-- profile.html -->
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Profile | GCL Platform</title>
+  <title>Profile | Linux CTF</title>
   <link rel="stylesheet" href="/static/style.css" />
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body {
-      font-family: 'Share Tech Mono', monospace;
-      background: linear-gradient(#0f0f0f, #1a1a1a);
-      color: #03f484;
-      margin: 0;
-      display: flex;
+    :root{
+      --bg:#0c0f0d; --panel:#0b1310; --border:#0f221a;
+      --ink:#03f484; --ink-d:#03f484b3; --ink-f:#03f48455;
+      --danger:#ff4d4d;
+      --radius:14px; --cell:12px; --gap:3px; --month-gap:10px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;display:flex;min-height:100vh;
+      background: radial-gradient(1200px 600px at 20% -10%, #0e1a14 2%, #0c0f0d 55%) fixed;
+      color:var(--ink);font-family:"Share Tech Mono", monospace;
     }
 
-    .sidebar {
-      width: 200px;
-      height: 100vh;
-      background: #111;
-      padding: 20px;
-      box-shadow: 3px 0 10px #03f48460;
+    /* Sidebar */
+    .sidebar{
+      width:220px;min-width:220px;height:100vh;position:sticky;top:0;
+      background:#111;padding:22px 18px 90px;box-shadow:3px 0 18px #03f48440;
+    }
+    .sidebar h2{margin:0 0 20px;font-size:22px}
+    .sidebar a{display:block;color:var(--ink);text-decoration:none;margin:10px 0}
+    .sidebar a:hover{ text-shadow:0 0 10px var(--ink) }
+    .logout{position:absolute;left:18px;right:18px;bottom:18px}
+    .btn{width:100%;padding:8px 12px;border:1px solid var(--danger);color:var(--danger);background:transparent;border-radius:10px;cursor:pointer}
+    .btn:hover{background:rgba(255,77,77,.1)}
+
+    /* Content */
+    .content{flex:1;max-width:1100px;padding:36px 42px}
+
+    .profile-header{display:flex;align-items:center;gap:24px;margin-bottom:22px}
+    .profile-photo-wrapper{position:relative;width:120px;height:120px}
+    .profile-photo-wrapper img,.initials{
+      width:120px;height:120px;border-radius:50%;border:2px solid var(--ink);
+      object-fit:cover;background:#0f0f0f;color:var(--ink);display:block;text-align:center;line-height:120px;font-size:36px;
+    }
+    .upload-form{position:absolute;right:-8px;bottom:-8px}
+    .upload-form label{cursor:pointer;background:var(--ink);color:#000;border-radius:999px;font-size:12px;padding:6px 10px}
+    .upload-form input[type=file]{display:none}
+
+    .profile-meta p{margin:4px 0;color:var(--ink-d)}
+
+    /* Streak Panel */
+    .streak-wrap{
+      margin-top:12px;background:var(--panel);border:1px solid var(--border);
+      border-radius:var(--radius);padding:16px;box-shadow:0 0 12px var(--ink-f)
+    }
+    .streak-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+    .streak-title{display:flex;align-items:center;gap:10px}
+    .streak-title h3{margin:0;font-size:16px}
+    .pill{font-size:12px;border:1px solid var(--ink);color:var(--ink);padding:2px 8px;border-radius:999px}
+    .year-select{
+      display:flex;align-items:center;gap:8px
+    }
+    .year-select label{color:var(--ink-d)}
+    .year-select select{
+      background:#020403;color:var(--ink);border:1px solid var(--ink);border-radius:8px;
+      padding:6px 10px;font-family:inherit
     }
 
-    .sidebar h2 {
-      font-size: 20px;
-      margin-bottom: 30px;
+    /* GitHub-like calendar */
+    .streak-months, .streak-grid{
+      display:grid;grid-auto-flow:column;grid-auto-columns:var(--cell);gap:var(--gap)
     }
-
-    .sidebar a {
-      display: block;
-      color: #03f484;
-      margin-bottom: 15px;
-      text-decoration: none;
+    .streak-months{
+      grid-template-rows:16px;color:#b9f7db;font-size:11px;margin-left:2px;user-select:none
     }
-
-    .sidebar a:hover {
-      text-shadow: 0 0 10px #03f484;
+    .streak-grid{grid-template-rows:repeat(7,var(--cell))}
+    .streak-cell{
+      width:var(--cell);height:var(--cell);border:1px solid var(--border);border-radius:2px;background:#0a1612
     }
-
-    .content {
-      flex: 1;
-      padding: 40px;
-    }
-
-    .profile-header {
-      display: flex;
-      align-items: center;
-      margin-bottom: 30px;
-    }
-
-    .profile-photo-wrapper {
-      position: relative;
-      width: 120px;
-      height: 120px;
-    }
-
-    .profile-photo-wrapper img,
-    .profile-photo-wrapper .initials {
-      width: 120px;
-      height: 120px;
-      border-radius: 50%;
-      border: 2px solid #03f484;
-      object-fit: cover;
-      display: block;
-      text-align: center;
-      line-height: 120px;
-      font-size: 36px;
-      background: #0f0f0f;
-      color: #03f484;
-    }
-
-    .upload-form {
-      position: absolute;
-      bottom: -10px;
-      right: -10px;
-    }
-
-    .upload-form label {
-      cursor: pointer;
-      display: inline-block;
-      padding: 5px 10px;
-      background: #03f484;
-      color: #000;
-      border-radius: 20px;
-      font-size: 12px;
-    }
-
-    .upload-form input[type="file"] {
-      display: none;
-    }
-
-    canvas {
-      margin-top: 20px;
-      background: #111;
-      border: 1px solid #03f48450;
-      border-radius: 8px;
-      padding: 10px;
-    }
+    .streak-cell.active{background:var(--ink);box-shadow:0 0 6px var(--ink-f)}
+    .month-spacer{width:var(--month-gap)}
+    .week-spacer{width:var(--month-gap);grid-row:1 / span 7}
+    .month-label{display:flex;align-items:center;justify-content:center}
   </style>
 </head>
-
 <body>
-  <div class="sidebar">
+  <aside class="sidebar">
     <h2>Linux CTF</h2>
     <a href="/dashboard">Modules</a>
     <a href="/profile">Profile</a>
     <a href="/settings">Settings</a>
-
-    <form action="/logout" method="POST" style="position: absolute; bottom: 20px; width: 160px;">
-      <button type="submit" style="
-      width: 100%;
-      background: transparent;
-      border: 1px solid red;
-      color: red;
-      padding: 6px 0;
-      font-family: 'Share Tech Mono', monospace;
-      cursor: pointer;
-    ">Logout</button>
+    <form class="logout" action="/logout" method="POST">
+      <button class="btn" type="submit">Logout</button>
     </form>
-  </div>
+  </aside>
 
-  <div class="content">
-    <div class="profile-header">
+  <main class="content">
+    <header class="profile-header">
       <div class="profile-photo-wrapper">
         <img src="/profile-photo/{{ user.uid }}" alt="Profile Photo"
-          onerror="this.style.display='none'; document.getElementById('initials').style.display='block';" />
-        <div class="initials" id="initials" style="display:none;">{{ user.username[:1]|upper }}</div>
+             onerror="this.style.display='none'; document.getElementById('initials').style.display='block';" />
+        <div id="initials" class="initials" style="display:none;">{{ (user.username or '')[:1]|upper }}</div>
         <form class="upload-form" action="/upload-photo" method="POST" enctype="multipart/form-data">
           <label for="photo">Change</label>
           <input id="photo" type="file" name="photo" accept="image/*" onchange="this.form.submit();" />
         </form>
       </div>
-      <div style="margin-left: 30px;">
-        <h2>{{ user.username }}</h2>
+
+      <div class="profile-meta">
+        <h2 style="margin:0 0 4px 0;">{{ user.username }}</h2>
         <p>Email: {{ user.email }}</p>
-        <p>Levels Completed: {{ user.last_completed_level }}</p>
+        <p>Levels Completed: {{ user.last_completed_level or 0 }}</p>
+        <p>Streak: {{ user.streak_count or 0 }} day(s)</p>
       </div>
-    </div>
+    </header>
 
-    <h3>Streak Graph</h3>
-    <div style="display: flex; align-items: center; gap: 20px;">
-      <div id="yearLabels" style="display: flex; flex-direction: column; font-size: 12px;">
-        <div>Mon</div>
-        <div>Wed</div>
-        <div>Fri</div>
+    <section class="streak-wrap">
+      <div class="streak-head">
+        <div class="streak-title">
+          <h3>Activity in</h3>
+          <span class="pill">{{ selected_year }}</span>
+        </div>
+        <div class="year-select">
+          <label for="year">Year</label>
+          <select id="year" onchange="location.href='/profile?year=' + this.value;">
+            {% for y in year_options %}
+              <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+          </select>
+        </div>
       </div>
-      <div id="streakGrid" style="display: flex;"></div>
-    </div>
-    <div style="margin-top: 10px; font-size: 12px; color: #999;">
-      {{ start_year }} – {{ current_year }}
-    </div>
 
-    <script>
-      const streakData = {{ streak_data | tojson }};
-      const grid = document.getElementById("streakGrid");
+      <!-- months row (labels) -->
+      <div id="streak-months" class="streak-months" aria-hidden="true"></div>
+      <!-- calendar grid -->
+      <div id="streak-grid" class="streak-grid" aria-label="Daily streak activity"></div>
+    </section>
+  </main>
 
-      const weeks = [];
-      streakData.forEach((entry, i) => {
-        const week = Math.floor(i / 7);
-        if (!weeks[week]) weeks[week] = [];
-        weeks[week].push(entry);
-      });
+  <script>
+    (function () {
+      const MARKED = new Set({{ streak_dates | tojson | safe }}); // list of "YYYY-MM-DD"
+      const year = {{ selected_year }};
+      const monthsRow = document.getElementById('streak-months');
+      const grid = document.getElementById('streak-grid');
 
-      weeks.forEach((week, i) => {
-        const weekCol = document.createElement("div");
-        weekCol.style.display = "flex";
-        weekCol.style.flexDirection = "column";
-        weekCol.style.marginRight = "2px";
+      // Build calendar bounds: first Sunday on/before Jan 1, last Saturday on/after Dec 31 (UTC)
+      const jan1 = new Date(Date.UTC(year, 0, 1));
+      const dec31 = new Date(Date.UTC(year, 11, 31));
+      const daysBackToSun = (jan1.getUTCDay() + 7 - 0) % 7; // Sun=0
+      const daysFwdToSat  = (6 + 7 - dec31.getUTCDay() + (6-1)) % 7; // simpler way below instead
+      // Better: Sunday=0 .. Saturday=6
+      const start = new Date(jan1); start.setUTCDate(jan1.getUTCDate() - jan1.getUTCDay());
+      const end   = new Date(dec31); end.setUTCDate(dec31.getUTCDate() + ((6 - dec31.getUTCDay()) % 7));
 
-        week.forEach(day => {
-          const cell = document.createElement("div");
-          cell.title = `${day.date} - ${day.active ? '✓' : '✗'}`;
-          cell.style.width = "11px";
-          cell.style.height = "11px";
-          cell.style.margin = "1px";
-          cell.style.borderRadius = "2px";
-          cell.style.backgroundColor = day.active ? "#03f484" : "#2a2a2a";  // darker gray
-          weekCol.appendChild(cell);
-        });
+      let d = new Date(start);
+      let currentLabeledMonth = -1;
 
-        grid.appendChild(weekCol);
-      });
-    </script>
+      function addMonthLabel(name) {
+        const label = document.createElement('div');
+        label.className = 'month-label';
+        label.textContent = name;
+        monthsRow.appendChild(label);
+      }
+      function addMonthGap() {
+        const mt = document.createElement('div'); mt.className = 'month-spacer'; monthsRow.appendChild(mt);
+        const wg = document.createElement('div'); wg.className = 'week-spacer';  grid.appendChild(wg);
+      }
 
+      while (d <= end) {
+        const firstWeekOfMonth = (d.getUTCDate() <= 7);
+        if (firstWeekOfMonth) {
+          const changed = d.getUTCMonth() !== currentLabeledMonth;
+          if (changed) {
+            if (currentLabeledMonth !== -1) addMonthGap();
+            currentLabeledMonth = d.getUTCMonth();
+            addMonthLabel(d.toLocaleString('en', { month: 'short', timeZone: 'UTC' }));
+          } else {
+            monthsRow.appendChild(document.createElement('div'));
+          }
+        } else {
+          monthsRow.appendChild(document.createElement('div'));
+        }
+
+        for (let r = 0; r < 7; r++) {
+          const cell = document.createElement('div');
+          cell.className = 'streak-cell';
+          const iso = d.toISOString().slice(0,10); // YYYY-MM-DD
+          if (MARKED.has(iso)) cell.classList.add('active');
+          grid.appendChild(cell);
+          d.setUTCDate(d.getUTCDate() + 1);
+        }
+      }
+    })();
+  </script>
 </body>
-
 </html>

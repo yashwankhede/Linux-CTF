@@ -5,18 +5,57 @@ from werkzeug.utils import secure_filename
 from datetime import datetime, timedelta
 from google.cloud import storage
 from dotenv import load_dotenv
+from datetime import datetime, timedelta, timezone
+from google.cloud import firestore
 import io
 import os
 import json
 import requests
+import calendar
 
 # Load environment
 load_dotenv()
 
+def build_year_heatmap(dates_set, year):
+    # Returns: list of months -> list of day dicts {date_str, active}
+    months = []
+    for m in range(1, 13):
+        days = []
+        _, last_day = calendar.monthrange(year, m)
+        for d in range(1, last_day + 1):
+            ds = datetime(year, m, d, tzinfo=timezone.utc).date().isoformat()
+            days.append({
+                "date": ds,
+                "active": (ds in dates_set)
+            })
+        months.append({
+            "month": m,
+            "days": days
+        })
+    return months
+
+def mark_streak_for_today(uid: str):
+    """Mark today's date as active in user's streak (idempotent)."""
+    today = datetime.now(timezone.utc).date().isoformat()  # 'YYYY-MM-DD'
+    db.collection("users").document(uid).set({
+        "streak_dates": {today: True},                     # map of date->True
+        "streak_last_updated": firestore.SERVER_TIMESTAMP
+    }, merge=True)
+
+# streak computation utility
+def _compute_consecutive_days(dates_set, today):
+    # Count back from today while dates exist
+    count = 0
+    d = today
+    while d.isoformat() in dates_set:
+        count += 1
+        d = d - timedelta(days=1)
+    return count
+
 # Firebase Admin Initialization
 cred = credentials.Certificate("/etc/secrets/firebase_key.json")
 firebase_admin.initialize_app(cred)
-db = firestore.client()
+db = firestore.Client()
 
 # App config
 app = Flask(__name__)
@@ -175,38 +214,52 @@ def submit_flag():
         return jsonify({"success": False, "message": "Unauthorized"}), 401
 
     user_id = session['uid']
-    submitted_flag = request.form.get('flag', '').strip()
+    data = request.get_json()
+    submitted_flag = data.get("flag", "").strip()
+    level = data.get("level", 0)
 
-    user_doc = db.collection('users').document(user_id).get()
+    user_ref = db.collection('users').document(user_id)
+    user_doc = user_ref.get()
+
     if not user_doc.exists:
         return jsonify({"success": False, "message": "User not found"}), 404
+
     user_data = user_doc.to_dict()
     last_completed = user_data.get('last_completed_level', 0)
-    next_level = last_completed + 1
 
-    flag_doc = db.collection('flags').document(f'easy-matrix{next_level}').get()
+    if level != last_completed + 1:
+        return jsonify({"success": False, "message": "Invalid level progression"}), 403
+
+    flag_doc = db.collection('flags').document(f'easy-matrix{level}').get()
     if not flag_doc.exists:
         return jsonify({"success": False, "message": "Flag not configured"}), 500
+
     correct_flag = flag_doc.to_dict().get('flag')
 
-    if submitted_flag == correct_flag:
-        db.collection('users').document(user_id).update({
-            'last_completed_level': next_level
-        })
-
-        today_str = datetime.utcnow().strftime('%Y-%m-%d')
-        blob = storage_client.bucket(bucket_name).blob(f'user_streaks/{user_id}.json')
-        if blob.exists():
-            streak_data = json.loads(blob.download_as_text())
-        else:
-            streak_data = {}
-        streak_data[today_str] = True
-        blob.upload_from_string(json.dumps(streak_data), content_type='application/json')
-
-        return jsonify({"success": True, "message": f"Level {next_level} completed!"})
-    else:
+    if submitted_flag != correct_flag:
         return jsonify({"success": False, "message": "Incorrect flag. Try again!"})
 
+    # ✅ Update level and streak
+    today = datetime.now(timezone.utc).date()
+    today_str = today.isoformat()
+
+    updates = {
+        'last_completed_level': level,
+        'streak_dates': firestore.ArrayUnion([today_str]),
+        'streak_last_marked': today_str
+    }
+
+    user_ref.update(updates)
+
+    # 🔁 Recompute streak
+    fresh = user_ref.get().to_dict() or {}
+    dates = set(fresh.get('streak_dates', []))
+    streak_count = _compute_consecutive_days(dates, today)
+
+    user_ref.update({'streak_count': streak_count})
+
+    return jsonify({"success": True, "message": f"Level {level} completed!"})
+    
 @app.route('/dashboard')
 def dashboard():
     if 'uid' not in session:
@@ -215,48 +268,96 @@ def dashboard():
     user_doc = db.collection('users').document(user_id).get()
     if not user_doc.exists:
         return redirect('/login')
-    user_data = user_doc.to_dict()
-    last_completed = user_data.get('last_completed_level', 0)
-    return render_template('dashboard.html', last_completed_level=last_completed)
+    user = db.collection('users').document(session['uid']).get().to_dict() or {}
+    dates = set(user.get('streak_dates', []))
+    year = datetime.now(timezone.utc).year
+
+    heatmap = build_year_heatmap(dates, year)
+
+    return render_template(
+        'dashboard.html',
+        last_completed_level=user.get('last_completed_level', 0),
+        streak_count=user.get('streak_count', 0),
+        streak_heatmap=heatmap,
+        streak_year=year
+    )
+
+from datetime import datetime, timedelta, timezone
 
 @app.route('/profile')
 def profile():
     if 'uid' not in session:
         return redirect('/login')
-    
+
     uid = session['uid']
-    user_doc = db.collection('users').document(uid).get()
-    if not user_doc.exists:
+    snap = db.collection('users').document(uid).get()
+    if not snap.exists:
         return "User not found", 404
+    user = snap.to_dict() or {}
 
-    user_data = user_doc.to_dict()
+    # --- year selection (defaults to current UTC year) ---
+    try:
+        selected_year = int(request.args.get('year', datetime.now(timezone.utc).year))
+    except ValueError:
+        selected_year = datetime.now(timezone.utc).year
 
-    streak_blob = storage_client.bucket(bucket_name).blob(f'user_streaks/{uid}.json')
-    if streak_blob.exists():
-        streak_data = json.loads(streak_blob.download_as_text())
+    # --- gather streak dates from Firestore first, else from the legacy GCS JSON ---
+    # Firestore array: users/{uid}.streak_dates == ["YYYY-MM-DD", ...]
+    firestore_dates = set(user.get('streak_dates', []) or [])
+    streak_dates = set()
+
+    if firestore_dates:
+        streak_dates = firestore_dates
     else:
-        streak_data = {}
+        # Legacy GCS blob: user_streaks/{uid}.json -> {"YYYY-MM-DD": true, ...}
+        blob = storage_client.bucket(bucket_name).blob(f'user_streaks/{uid}.json')
+        if blob.exists():
+            try:
+                raw = json.loads(blob.download_as_text())
+                streak_dates = {d for d, v in raw.items() if v}
+            except Exception:
+                streak_dates = set()
 
-    today = datetime.utcnow().date()
-    start_date = today - timedelta(days=today.weekday() + 364)  # go back 1 year aligned to Monday
+    # Build year options (from earliest streak year to current year)
+    if streak_dates:
+        earliest_year = min(int(d[:4]) for d in streak_dates if len(d) >= 4 and d[:4].isdigit())
+    else:
+        earliest_year = datetime.now(timezone.utc).year
+    current_year = datetime.now(timezone.utc).year
+    year_options = list(range(current_year, earliest_year - 1, -1)) or [current_year]
+
+    # --- compute calendar bounds like GitHub (Sun..Sat columns covering the whole year) ---
+    jan1 = datetime(selected_year, 1, 1).date()
+    dec31 = datetime(selected_year, 12, 31).date()
+
+    # weekday(): Mon=0 .. Sun=6
+    # first Sunday on/before Jan 1
+    days_back_to_sun = (jan1.weekday() + 1) % 7
+    start_date = jan1 - timedelta(days=days_back_to_sun)
+
+    # last Saturday on/after Dec 31
+    days_fwd_to_sat = (5 - dec31.weekday()) % 7  # Saturday = 5
+    end_date = dec31 + timedelta(days=days_fwd_to_sat)
+
+    # Grid we pass to the template (mostly unused for logic, helpful for debugging)
+    total_days = (end_date - start_date).days + 1
     grid = []
+    for i in range(total_days):
+        d = start_date + timedelta(days=i)
+        iso = d.isoformat()
+        grid.append({"date": iso, "active": (iso in streak_dates)})
 
-    for i in range(371):  # slightly more than 365 to align visually
-        day = start_date + timedelta(days=i)
-        grid.append({
-            "date": str(day),
-            "active": streak_data.get(str(day), False)
-        })
+    user["streak_grid"] = grid
 
-    user_data["streak_grid"] = grid
     return render_template(
-        'profile.html',
-        user=user_data,
-        streak_data=user_data["streak_grid"],
-        start_year=start_date.year,
-        current_year=today.year
+        "profile.html",
+        user=user,
+        selected_year=selected_year,
+        year_options=year_options,
+        # set of ISO dates that should be ON
+        streak_dates=list(streak_dates),
     )
-
+        
 @app.route('/upload-photo', methods=['POST'])
 def upload_photo():
     if 'uid' not in session:
@@ -408,7 +509,6 @@ def change_email():
 
     except Exception as e:
         return render_template("settings.html", error=str(e), user=user_data)
-
 
 @app.route('/confirm-email-change')
 def confirm_email_change():
