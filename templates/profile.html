@@ -1,196 +1,513 @@
 <!-- profile.html -->
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <title>Profile | Linux CTF</title>
   <link rel="stylesheet" href="/static/style.css" />
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <style>
-    :root{
-      --bg:#0c0f0d; --panel:#0b1310; --border:#0f221a;
-      --ink:#03f484; --ink-d:#03f484b3; --ink-f:#03f48455;
-      --danger:#ff4d4d;
-      --radius:14px; --cell:12px; --gap:3px; --month-gap:10px;
-    }
-    *{box-sizing:border-box}
-    body{
-      margin:0;display:flex;min-height:100vh;
-      background: radial-gradient(1200px 600px at 20% -10%, #0e1a14 2%, #0c0f0d 55%) fixed;
-      color:var(--ink);font-family:"Share Tech Mono", monospace;
+    :root {
+      --bg: #0c0f0d;
+      --panel: #0f1512;
+      --ink: #03f484;
+      --ink-dim: #89f7c8;
+      --ink-faint: #03f4844a;
+      --border: #0f221a;
+      --danger: #ff4d4d;
+      --cell: 12px;
+      --gap: 3px;
+      --month-gap: 8px;
+      --radius: 14px;
+      --shadow: 0 0 14px var(--ink-faint);
     }
 
-    /* Sidebar */
-    .sidebar{
-      width:220px;min-width:220px;height:100vh;position:sticky;top:0;
-      background:#111;padding:22px 18px 90px;box-shadow:3px 0 18px #03f48440;
+    * {
+      box-sizing: border-box
     }
-    .sidebar h2{margin:0 0 20px;font-size:22px}
-    .sidebar a{display:block;color:var(--ink);text-decoration:none;margin:10px 0}
-    .sidebar a:hover{ text-shadow:0 0 10px var(--ink) }
-    .logout{position:absolute;left:18px;right:18px;bottom:18px}
-    .btn{width:100%;padding:8px 12px;border:1px solid var(--danger);color:var(--danger);background:transparent;border-radius:10px;cursor:pointer}
-    .btn:hover{background:rgba(255,77,77,.1)}
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      background: radial-gradient(1200px 600px at 20% -10%, #0e1a14 2%, var(--bg) 55%) fixed;
+      color: var(--ink);
+      font-family: "Share Tech Mono", monospace;
+    }
+
+    /* Sidebar (flex column so logout stays inside) */
+    .sidebar {
+      width: 220px;
+      min-width: 200px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: #101412;
+      padding: 22px 20px;
+      box-shadow: 3px 0 18px #03f4842f
+    }
+
+    .sidebar h2 {
+      font-size: 22px;
+      margin: 0 0 22px
+    }
+
+    .sidebar a {
+      display: block;
+      color: var(--ink);
+      margin: 10px 0;
+      text-decoration: none
+    }
+
+    .sidebar a:hover {
+      text-shadow: 0 0 8px var(--ink)
+    }
+
+    .sidebar .spacer {
+      flex: 1
+    }
+
+    .btn {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--danger);
+      color: var(--danger);
+      background: transparent;
+      border-radius: 10px;
+      cursor: pointer
+    }
+
+    .btn:hover {
+      background: rgba(255, 77, 77, .08)
+    }
 
     /* Content */
-    .content{flex:1;max-width:1100px;padding:36px 42px}
-
-    .profile-header{display:flex;align-items:center;gap:24px;margin-bottom:22px}
-    .profile-photo-wrapper{position:relative;width:120px;height:120px}
-    .profile-photo-wrapper img,.initials{
-      width:120px;height:120px;border-radius:50%;border:2px solid var(--ink);
-      object-fit:cover;background:#0f0f0f;color:var(--ink);display:block;text-align:center;line-height:120px;font-size:36px;
-    }
-    .upload-form{position:absolute;right:-8px;bottom:-8px}
-    .upload-form label{cursor:pointer;background:var(--ink);color:#000;border-radius:999px;font-size:12px;padding:6px 10px}
-    .upload-form input[type=file]{display:none}
-
-    .profile-meta p{margin:4px 0;color:var(--ink-d)}
-
-    /* Streak Panel */
-    .streak-wrap{
-      margin-top:12px;background:var(--panel);border:1px solid var(--border);
-      border-radius:var(--radius);padding:16px;box-shadow:0 0 12px var(--ink-f)
-    }
-    .streak-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-    .streak-title{display:flex;align-items:center;gap:10px}
-    .streak-title h3{margin:0;font-size:16px}
-    .pill{font-size:12px;border:1px solid var(--ink);color:var(--ink);padding:2px 8px;border-radius:999px}
-    .year-select{
-      display:flex;align-items:center;gap:8px
-    }
-    .year-select label{color:var(--ink-d)}
-    .year-select select{
-      background:#020403;color:var(--ink);border:1px solid var(--ink);border-radius:8px;
-      padding:6px 10px;font-family:inherit
+    .content {
+      flex: 1;
+      padding: 36px 42px 80px;
+      max-width: 1200px;
+      margin: 0 auto
     }
 
-    /* GitHub-like calendar */
-    .streak-months, .streak-grid{
-      display:grid;grid-auto-flow:column;grid-auto-columns:var(--cell);gap:var(--gap)
+    /* Header */
+    .profile-header {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      margin-bottom: 18px
     }
-    .streak-months{
-      grid-template-rows:16px;color:#b9f7db;font-size:11px;margin-left:2px;user-select:none
+
+    .avatar-wrap {
+      position: relative;
+      width: 120px;
+      height: 120px
     }
-    .streak-grid{grid-template-rows:repeat(7,var(--cell))}
-    .streak-cell{
-      width:var(--cell);height:var(--cell);border:1px solid var(--border);border-radius:2px;background:#0a1612
+
+    .avatar,
+    .initials {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      border: 2px solid var(--ink);
+      object-fit: cover;
+      display: block;
+      text-align: center;
+      line-height: 120px;
+      font-size: 36px;
+      background: #0f0f0f;
+      color: var(--ink)
     }
-    .streak-cell.active{background:var(--ink);box-shadow:0 0 6px var(--ink-f)}
-    .month-spacer{width:var(--month-gap)}
-    .week-spacer{width:var(--month-gap);grid-row:1 / span 7}
-    .month-label{display:flex;align-items:center;justify-content:center}
+
+    .change-wrap {
+      position: absolute;
+      right: -10px;
+      bottom: -10px
+    }
+
+    .change-wrap label {
+      cursor: pointer;
+      display: inline-block;
+      padding: 6px 10px;
+      background: var(--ink);
+      color: #00140c;
+      border-radius: 999px;
+      font-size: 12px
+    }
+
+    .change-wrap input {
+      display: none
+    }
+
+    .meta h2 {
+      margin: 0 0 4px
+    }
+
+    .meta p {
+      margin: 3px 0;
+      color: var(--ink-dim)
+    }
+
+    /* Flame badge */
+    .streak-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+      padding: 4px 10px;
+      border: 1px solid var(--ink);
+      border-radius: 999px
+    }
+
+    .flame {
+      width: 18px;
+      height: 22px;
+      display: inline-block;
+      position: relative;
+      filter: drop-shadow(0 0 6px #00ff9a80)
+    }
+
+    .flame svg {
+      display: block
+    }
+
+    .flame .flicker {
+      transform-origin: 50% 100%;
+      animation: flameFlicker .85s infinite ease-in-out alternate
+    }
+
+    .flame .glow {
+      animation: glowPulse 1.6s infinite ease-in-out
+    }
+
+    @keyframes flameFlicker {
+      0% {
+        transform: translateY(0) scaleY(1)
+      }
+
+      100% {
+        transform: translateY(-1px) scaleY(1.08)
+      }
+    }
+
+    @keyframes glowPulse {
+
+      0%,
+      100% {
+        opacity: .8
+      }
+
+      50% {
+        opacity: 1
+      }
+    }
+
+    /* Streak card */
+    .streak-card {
+      margin-top: 18px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px 18px;
+      box-shadow: var(--shadow)
+    }
+
+    .streak-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px
+    }
+
+    .streak-head .title {
+      margin: 0;
+      font-size: 16px
+    }
+
+    .year-select {
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .year-select select {
+      background: #08120f;
+      border: 1px solid var(--ink);
+      color: var(--ink);
+      border-radius: 8px;
+      padding: 4px 8px;
+      font-family: inherit
+    }
+
+    /* Month labels + grid (GitHub-like) */
+    .streak-months,
+    .streak-grid {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: var(--cell);
+      gap: var(--gap)
+    }
+
+    .streak-months {
+      grid-template-rows: 16px;
+      font-size: 11px;
+      color: #b9f7db;
+      margin-left: 2px;
+      user-select: none
+    }
+
+    .streak-grid {
+      grid-template-rows: repeat(7, var(--cell))
+    }
+
+    .month-spacer {
+      width: var(--month-gap)
+    }
+
+    .week-spacer {
+      width: var(--month-gap);
+      grid-row: 1 / span 7
+    }
+
+    .streak-cell {
+      width: var(--cell);
+      height: var(--cell);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      background: #0a1612;
+      position: relative
+    }
+
+    .streak-cell.active {
+      background: var(--ink);
+      box-shadow: 0 0 6px var(--ink-faint)
+    }
+
+    .streak-cell.active:hover {
+      outline: 1px solid var(--ink);
+      cursor: pointer
+    }
+
+    /* Tooltip */
+    .tooltip {
+      position: fixed;
+      z-index: 1000;
+      pointer-events: none;
+      background: #06100d;
+      border: 1px solid var(--ink);
+      color: var(--ink);
+      padding: 6px 8px;
+      border-radius: 8px;
+      font-size: 12px;
+      box-shadow: var(--shadow);
+      opacity: 0;
+      transition: opacity .08s;
+      max-width: 320px;
+      white-space: nowrap
+    }
+
+    .tooltip.show {
+      opacity: 1
+    }
   </style>
 </head>
+
 <body>
+  <!-- Sidebar -->
   <aside class="sidebar">
     <h2>Linux CTF</h2>
     <a href="/dashboard">Modules</a>
     <a href="/profile">Profile</a>
     <a href="/settings">Settings</a>
-    <form class="logout" action="/logout" method="POST">
+    <div class="spacer"></div>
+    <form action="/logout" method="POST">
       <button class="btn" type="submit">Logout</button>
     </form>
   </aside>
 
+  <!-- Main -->
   <main class="content">
+    <!-- Header -->
     <header class="profile-header">
-      <div class="profile-photo-wrapper">
-        <img src="/profile-photo/{{ user.uid }}" alt="Profile Photo"
-             onerror="this.style.display='none'; document.getElementById('initials').style.display='block';" />
-        <div id="initials" class="initials" style="display:none;">{{ (user.username or '')[:1]|upper }}</div>
-        <form class="upload-form" action="/upload-photo" method="POST" enctype="multipart/form-data">
+      <div class="avatar-wrap">
+        <img class="avatar" src="/profile-photo/{{ user.uid }}"
+          onerror="this.style.display='none'; document.getElementById('initials').style.display='block';" />
+        <div class="initials" id="initials" style="display:none;">{{ user.username[0]|upper }}</div>
+        <form class="change-wrap" action="/upload-photo" method="POST" enctype="multipart/form-data">
           <label for="photo">Change</label>
           <input id="photo" type="file" name="photo" accept="image/*" onchange="this.form.submit();" />
         </form>
       </div>
 
-      <div class="profile-meta">
-        <h2 style="margin:0 0 4px 0;">{{ user.username }}</h2>
+      <div class="meta">
+        <h2>{{ user.username }}</h2>
         <p>Email: {{ user.email }}</p>
-        <p>Levels Completed: {{ user.last_completed_level or 0 }}</p>
-        <p>Streak: {{ user.streak_count or 0 }} day(s)</p>
+        <p>Levels Completed: {{ user.last_completed_level }}</p>
+
+        <div class="streak-badge">
+          {% if user.streak_count|default(0) > 0 %}
+          <span class="flame" aria-hidden="true">
+            <svg viewBox="0 0 24 28" width="24" height="28" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <radialGradient id="g" cx="50%" cy="50%" r="60%">
+                  <stop offset="0%" stop-color="#b7ffde" />
+                  <stop offset="60%" stop-color="#5cffb2" />
+                  <stop offset="100%" stop-color="#03f484" />
+                </radialGradient>
+              </defs>
+              <path class="glow"
+                d="M12 27c6 0 10-4 10-9 0-3-1-5-3-7-2-2-3-3-3-6 0-2-2-5-4-5-1 0 0 3-2 5C8 7 5 8 5 13c0 5 3 14 7 14z"
+                fill="url(#g)" fill-opacity=".35" />
+              <path class="flicker"
+                d="M12 26c5 0 8-3 8-7 0-2-1-4-2-5-2-2-3-3-3-5 0-2-1-4-3-5-1 0-1 2-2 3-2 2-5 3-5 7s2 12 7 12z"
+                fill="url(#g)" />
+            </svg>
+          </span>
+          {% endif %}
+          <span>Streak: {{ user.streak_count|default(0) }} day(s)</span>
+        </div>
       </div>
     </header>
 
-    <section class="streak-wrap">
+    <!-- Streak card -->
+    <section class="streak-card">
       <div class="streak-head">
-        <div class="streak-title">
-          <h3>Activity in</h3>
-          <span class="pill">{{ selected_year }}</span>
-        </div>
+        <h3 class="title">Activity in <span id="year-pill">{{ selected_year }}</span></h3>
         <div class="year-select">
           <label for="year">Year</label>
-          <select id="year" onchange="location.href='/profile?year=' + this.value;">
-            {% for y in year_options %}
-              <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+          <select id="year" aria-label="Select year">
+            {% for y in years %}
+            <option value="{{ y }}" {% if y==selected_year %}selected{% endif %}>{{ y }}</option>
             {% endfor %}
           </select>
         </div>
       </div>
 
-      <!-- months row (labels) -->
       <div id="streak-months" class="streak-months" aria-hidden="true"></div>
-      <!-- calendar grid -->
       <div id="streak-grid" class="streak-grid" aria-label="Daily streak activity"></div>
     </section>
   </main>
 
+  <!-- Floating tooltip -->
+  <div id="tooltip" class="tooltip" role="tooltip" aria-hidden="true"></div>
+
   <script>
     (function () {
-      const MARKED = new Set({{ streak_dates | tojson | safe }}); // list of "YYYY-MM-DD"
-      const year = {{ selected_year }};
-      const monthsRow = document.getElementById('streak-months');
-      const grid = document.getElementById('streak-grid');
+      // Normalize backend data:
+      // - streak_data can be an array of ISO strings OR [{date, active}] items.
+      const RAW = {{ streak_data | default ([], true) | tojson | safe
+    }};
+    const LEVELS = {{ streak_levels | default ({}, true) | tojson | safe }};
+    const selectedYear = {{ selected_year }};
+    const monthsRow = document.getElementById('streak-months');
+    const grid = document.getElementById('streak-grid');
+    const tooltip = document.getElementById('tooltip');
 
-      // Build calendar bounds: first Sunday on/before Jan 1, last Saturday on/after Dec 31 (UTC)
-      const jan1 = new Date(Date.UTC(year, 0, 1));
-      const dec31 = new Date(Date.UTC(year, 11, 31));
-      const daysBackToSun = (jan1.getUTCDay() + 7 - 0) % 7; // Sun=0
-      const daysFwdToSat  = (6 + 7 - dec31.getUTCDay() + (6-1)) % 7; // simpler way below instead
-      // Better: Sunday=0 .. Saturday=6
-      const start = new Date(jan1); start.setUTCDate(jan1.getUTCDate() - jan1.getUTCDay());
-      const end   = new Date(dec31); end.setUTCDate(dec31.getUTCDate() + ((6 - dec31.getUTCDay()) % 7));
+    // Build MARKED set of ISO dates that are active
+    let MARKED;
+    if (RAW.length && typeof RAW[0] === 'string') {
+      MARKED = new Set(RAW);
+    } else {
+      MARKED = new Set(RAW.filter(d => d && d.active).map(d => d.date));
+    }
 
-      let d = new Date(start);
-      let currentLabeledMonth = -1;
+    // Calendar bounds (Sun..Sat)
+    const jan1 = new Date(Date.UTC(selectedYear, 0, 1));
+    const start = new Date(jan1);
+    start.setUTCDate(jan1.getUTCDate() - jan1.getUTCDay()); // back to Sunday
+    const jan1Next = new Date(Date.UTC(selectedYear + 1, 0, 1));
+    const end = new Date(jan1Next);
+    end.setUTCDate(jan1Next.getUTCDate() + (6 - jan1Next.getUTCDay())); // forward to Saturday
 
-      function addMonthLabel(name) {
-        const label = document.createElement('div');
-        label.className = 'month-label';
-        label.textContent = name;
-        monthsRow.appendChild(label);
-      }
-      function addMonthGap() {
-        const mt = document.createElement('div'); mt.className = 'month-spacer'; monthsRow.appendChild(mt);
-        const wg = document.createElement('div'); wg.className = 'week-spacer';  grid.appendChild(wg);
-      }
+    let d = new Date(start);
+    let currentLabeledMonth = -1;
 
-      while (d <= end) {
-        const firstWeekOfMonth = (d.getUTCDate() <= 7);
-        if (firstWeekOfMonth) {
-          const changed = d.getUTCMonth() !== currentLabeledMonth;
-          if (changed) {
-            if (currentLabeledMonth !== -1) addMonthGap();
-            currentLabeledMonth = d.getUTCMonth();
-            addMonthLabel(d.toLocaleString('en', { month: 'short', timeZone: 'UTC' }));
-          } else {
-            monthsRow.appendChild(document.createElement('div'));
-          }
+    function addMonthLabel(text) {
+      const el = document.createElement('div');
+      el.textContent = text;
+      monthsRow.appendChild(el);
+    }
+    function addMonthGap() {
+      const mTop = document.createElement('div');
+      mTop.className = 'month-spacer';
+      monthsRow.appendChild(mTop);
+
+      const w = document.createElement('div');
+      w.className = 'week-spacer';
+      grid.appendChild(w);
+    }
+
+    // Tooltip helpers
+    function showTip(html, x, y) {
+      tooltip.innerHTML = html;
+      tooltip.style.left = (x + 12) + 'px';
+      tooltip.style.top = (y + 12) + 'px';
+      tooltip.classList.add('show');
+      tooltip.setAttribute('aria-hidden', 'false');
+    }
+    function hideTip() {
+      tooltip.classList.remove('show');
+      tooltip.setAttribute('aria-hidden', 'true');
+    }
+
+    while (d <= end) {
+      const isFirstWeek = (d.getUTCDate() <= 7);
+      if (isFirstWeek) {
+        const monthChanged = d.getUTCMonth() !== currentLabeledMonth;
+        if (monthChanged) {
+          if (currentLabeledMonth !== -1) addMonthGap();
+          currentLabeledMonth = d.getUTCMonth();
+          addMonthLabel(d.toLocaleString('en', { month: 'short', timeZone: 'UTC' }));
         } else {
           monthsRow.appendChild(document.createElement('div'));
         }
-
-        for (let r = 0; r < 7; r++) {
-          const cell = document.createElement('div');
-          cell.className = 'streak-cell';
-          const iso = d.toISOString().slice(0,10); // YYYY-MM-DD
-          if (MARKED.has(iso)) cell.classList.add('active');
-          grid.appendChild(cell);
-          d.setUTCDate(d.getUTCDate() + 1);
-        }
+      } else {
+        monthsRow.appendChild(document.createElement('div'));
       }
-    })();
+
+      for (let r = 0; r < 7; r++) {
+        const iso = d.toISOString().slice(0, 10); // YYYY-MM-DD
+        const cell = document.createElement('div');
+        cell.className = 'streak-cell';
+
+        if (MARKED.has(iso)) {
+          cell.classList.add('active');
+
+          const levels = Array.isArray(LEVELS[iso]) ? LEVELS[iso] : [];
+          const count = levels.length;
+          const levelsText = count ? levels.join(', ') : 'No level details';
+
+          // accessibility-only label (no native tooltip)
+          cell.setAttribute('aria-label', `${iso} — Solved: ${count} level(s). Levels: ${levelsText}`);
+
+          // custom tooltip only
+          cell.addEventListener('mouseenter', (e) => {
+            showTip(
+              `<strong>${iso}</strong><br/>Solved <strong>${count}</strong> level(s)<br/>Levels: ${levelsText}`,
+              e.clientX, e.clientY
+            );
+          });
+          cell.addEventListener('mousemove', (e) => {
+            tooltip.style.left = (e.clientX + 12) + 'px';
+            tooltip.style.top = (e.clientY + 12) + 'px';
+          });
+          cell.addEventListener('mouseleave', hideTip);
+        }
+
+        grid.appendChild(cell);
+        d.setUTCDate(d.getUTCDate() + 1);
+      }
+    }
+
+    // Year picker -> reload with param
+    document.getElementById('year').addEventListener('change', (e) => {
+      const y = e.target.value;
+      const url = new URL(window.location.href);
+      url.searchParams.set('year', y);
+      window.location.href = url.toString();
+    });
+    }) ();
   </script>
 </body>
+
 </html>
